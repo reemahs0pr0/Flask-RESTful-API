@@ -9,6 +9,14 @@ from flask import request
 def home_page():
     df = pd.read_csv('Combined_Jobs_Final.csv')
     
+    # ##### to read dataset from MySQL #####
+    # from sqlalchemy import create_engine
+    
+    # sqlEngine = create_engine('mysql+pymysql://root:<password>@localhost:3306/<schema>')
+    
+    # with sqlEngine.connect() as conn, conn.begin():
+    #     df = pd.read_sql_table("<table name>", conn);
+    
     df_new = df[['Title', 'Job.Description']]
     df_new = df_new.dropna()
     
