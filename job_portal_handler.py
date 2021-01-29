@@ -128,5 +128,5 @@ def search():
     
     return df_result_weighted_search.to_html()
 
-    ##### for REST API calls from Java #####
+    ##### for REST API calls #####
     # return df_result_weighted_search.to_json(orient="records")
