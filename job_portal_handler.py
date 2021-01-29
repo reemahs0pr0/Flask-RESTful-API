@@ -93,7 +93,7 @@ def home_page():
      
     return df_result.to_html()
 
-    ##### for REST API calls from Java #####
+    ##### for REST API calls #####
     # return df_result.to_json(orient="records")
 
 def search():
