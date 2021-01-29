@@ -104,7 +104,7 @@ def home_page():
         df_result.loc[i] = df_final_final.loc[doc_idx]
         i += 1
         
-    return df_result.to_json(orient="index")
+    return df_result.to_json(orient="records")
 
 def search():
     search =  request.args.get('query')
@@ -135,4 +135,4 @@ def search():
         df_result_weighted_search.loc[i] = df_final_final.loc[doc_idx]
         i += 1
     
-    return df_result_weighted_search.to_json(orient="index")
+    return df_result_weighted_search.to_json(orient="records")
