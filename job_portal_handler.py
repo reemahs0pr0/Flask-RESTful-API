@@ -82,16 +82,24 @@ def home_page():
     sorted_series = sorted_series[sorted_series!=0]
     # print(sorted_series)
     
-    i = 0
-    df_result = pd.DataFrame(columns=['Job Title', 'Company Name', \
-                                      'Job Description', 'Skills', 'Job Link'])
-                             
+    ##### for Java GET request #####
+    result = ""
     for index in sorted_series.index:
-        doc_idx = int(index[4:])
-        df_result.loc[i] = df.loc[doc_idx]
-        i += 1
+        result += index[4:] + ","
+    
+    return result
+    
+    # i = 0
+    # df_result = pd.DataFrame(columns=['Job Title', 'Company Name', \
+    #                                   'Job Description', 'Skills', 'Job Link'])
+                             
+    # for index in sorted_series.index:
+    #     doc_idx = int(index[4:])
+    #     df_result.loc[i] = df.loc[doc_idx]
+    #     i += 1
      
-    return df_result.to_html()
+    ##### for HTML result #####
+    # return df_result.to_html()
 
     ##### for REST API calls #####
     # return df_result.to_json(orient="records")
@@ -116,17 +124,24 @@ def search():
         [sorted_series_weighted_search!=0]
     # print(sorted_series_weighted_search)
     
-    i = 0
-    df_result_weighted_search = \
-        pd.DataFrame(columns=['Job Title', 'Company Name', 'Job Description', \
-                              'Skills', 'Job Link'])
-                             
+    result = ""
     for index in sorted_series_weighted_search.index:
-        doc_idx = int(index[4:])
-        df_result_weighted_search.loc[i] = df.loc[doc_idx]
-        i += 1
+        result += index[4:] + ","
     
-    return df_result_weighted_search.to_html()
+    return result
+    
+    # i = 0
+    # df_result_weighted_search = \
+    #     pd.DataFrame(columns=['Job Title', 'Company Name', 'Job Description', \
+    #                           'Skills', 'Job Link'])
+                             
+    # for index in sorted_series_weighted_search.index:
+    #     doc_idx = int(index[4:])
+    #     df_result_weighted_search.loc[i] = df.loc[doc_idx]
+    #     i += 1
+    
+    ##### for HTML result #####
+    # return df_result_weighted_search.to_html()
 
     ##### for REST API calls #####
     # return df_result_weighted_search.to_json(orient="records")
