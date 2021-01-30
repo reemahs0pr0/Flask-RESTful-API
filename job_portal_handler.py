@@ -124,6 +124,7 @@ def search():
         [sorted_series_weighted_search!=0]
     # print(sorted_series_weighted_search)
     
+    ##### for Java GET request #####
     result = ""
     for index in sorted_series_weighted_search.index:
         result += index[4:] + ","
