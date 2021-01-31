@@ -10,10 +10,3 @@ app.add_url_rule('/search/',
 
 if __name__ == '__main__':
     app.run(debug=True)
-    
-# Run file and access the server from your browser
-# http://127.0.0.1:5000/
-
-# For search results after accessing server from browser
-# http://127.0.0.1:5000/search/?query={query}
-# eg. http://127.0.0.1:5000/search/?query=computer%20science

@@ -12,7 +12,15 @@ public class test {
 	public static void main(String[] args) {
 		
 		  try { 
-			  URL url = new URL("http://127.0.0.1:5000/"); 
+			  // personalised main page
+			  int userId = 1;
+			  URL url = new URL("http://127.0.0.1:5000/?id=" + userId);
+			  
+			  // search results
+//			  String keyword = "software developer";
+//			  String keywordParam = keyword.replace(" ", "+");
+//			  URL url = new URL("http://127.0.0.1:5000/search/?query=" + keywordParam); 
+			  
 			  HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			  
 			  conn.setRequestMethod("GET");

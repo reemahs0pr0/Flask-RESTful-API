@@ -7,15 +7,15 @@ from sklearn.metrics.pairwise import cosine_similarity
 from flask import request
 
 def home_page():
-    global df
-    df = pd.read_csv('fullmonsters.csv')
+    # global df
+    # df = pd.read_csv('fullmonsters.csv')
     
     ##### to read dataset from MySQL #####
-    # from sqlalchemy import create_engine
+    from sqlalchemy import create_engine
     
-    # sqlEngine = create_engine('mysql+pymysql://root:<password>@localhost:3306/<schema>')
-    # with sqlEngine.connect() as conn, conn.begin():
-    #     df = pd.read_sql_table("<table name>", conn);
+    sqlEngine = create_engine('mysql+pymysql://root:<password>@localhost:3306/<schema>')
+    with sqlEngine.connect() as conn, conn.begin():
+        df = pd.read_sql_table('<table name>', conn);
     
     df['corpus'] = df['Job Title'] + ' ' + df['Job Description'] + ' ' + \
         df['Skills'].astype(str)
@@ -50,20 +50,23 @@ def home_page():
     global tfidf_df
     tfidf_df = pd.DataFrame(data=tfidf_wm, index=indexes, columns=features)
     
-    ##### if resume in word doc format #####
-    from docx import Document
+    with sqlEngine.connect() as conn, conn.begin():
+        df_user = pd.read_sql_table("user", conn);
+        
+    user_id =  request.args.get('id')
+    path = df_user.iloc[int(user_id)-1]['Path']
     
-    doc = Document('resume.docx')
-    fullText = []
-    for para in doc.paragraphs:
-        fullText.append(para.text)
-    resume_doc = '\n'.join(fullText)
-    
-    ##### if resume in pdf format #####
-    # from tika import parser   
-  
-    # parsed_pdf = parser.from_file("resume.pdf") 
-    # resume_doc = parsed_pdf['content']  
+    if path.endswith('.pdf'):
+        from tika import parser   
+        parsed_pdf = parser.from_file(path) 
+        resume_doc = parsed_pdf['content']
+    else:
+        from docx import Document
+        doc = Document(path)
+        fullText = []
+        for para in doc.paragraphs:
+            fullText.append(para.text)
+        resume_doc = '\n'.join(fullText)
     
     query = resume_doc
     query = query.translate(punc)
