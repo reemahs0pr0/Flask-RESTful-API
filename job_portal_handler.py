@@ -5,20 +5,20 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from flask import request
+from csv_to_mysql import insert_jobs
+from graphs_to_mysql import generate_graphs
 
-def home_page():
-    # global df
-    # df = pd.read_csv('fullmonsters.csv')
-    
-    ##### to read dataset from MySQL #####
+def start():
+    insert_jobs()
     from sqlalchemy import create_engine
     
-    sqlEngine = create_engine('mysql+pymysql://root:<password>@localhost:3306/<schema>')
+    global sqlEngine, df
+    sqlEngine = create_engine('mysql+pymysql://root:password@localhost:3306/jinder')
     with sqlEngine.connect() as conn, conn.begin():
-        df = pd.read_sql_table('<table name>', conn);
+        df = pd.read_sql_table('jobs', conn);
     
-    df['corpus'] = df['Job Title'] + ' ' + df['Job Description'] + ' ' + \
-        df['Skills'].astype(str)
+    df['corpus'] = df['jobTitle'] + ' ' + df['jobDescription'] + ' ' + \
+        df['skills'].astype(str) + ' ' + df['companyName']
     
     corpus = df['corpus'].values
     
@@ -50,102 +50,176 @@ def home_page():
     global tfidf_df
     tfidf_df = pd.DataFrame(data=tfidf_wm, index=indexes, columns=features)
     
-    with sqlEngine.connect() as conn, conn.begin():
-        df_user = pd.read_sql_table("user", conn);
+    sorted_df = pd.DataFrame(data = docs, columns=["col"])
+    generate_graphs(sorted_df)
+
+def search(): 
+    if request.headers['Authorization'] == 'Jinder':
+        search =  request.args.get('query')
+        search = search.replace('+', ' ')
+        search = search.translate(punc)
+        search_arr = [' '.join([lm.lemmatize(w) for w in search.lower().\
+                                split()if not w in stop_words])]
         
-    user_id =  request.args.get('id')
-    path = df_user.iloc[int(user_id)-1]['Path']
+        tfidf_search = tfidf_vec.transform(search_arr).toarray()
+        
+        docs_similarity_search = cosine_similarity(tfidf_search, tfidf_wm)
+        query_similarity_search = docs_similarity_search[0]
+        
+        series_weighted_search = pd.Series(query_similarity_search, \
+                                               index=tfidf_df.index)
+        sorted_series_weighted_search = series_weighted_search.\
+            sort_values(ascending=False)
+        sorted_series_weighted_search = sorted_series_weighted_search\
+            [sorted_series_weighted_search!=0]
+        
+        result = ""
+        for index in sorted_series_weighted_search.index:
+            result += index[4:] + ","
+        
+        return result
     
-    if path.endswith('.pdf'):
-        from tika import parser   
-        parsed_pdf = parser.from_file(path) 
-        resume_doc = parsed_pdf['content']
-    else:
-        from docx import Document
-        doc = Document(path)
-        fullText = []
-        for para in doc.paragraphs:
-            fullText.append(para.text)
-        resume_doc = '\n'.join(fullText)
+def resume():    
+    if request.headers['Authorization'] == 'Jinder':
+        with sqlEngine.connect() as conn, conn.begin():
+            df_user = pd.read_sql_table("jobseeker", conn);
+            
+        user_id =  request.args.get('id')
+        path = df_user.iloc[int(user_id)-1]['resumeUrl']
+        
+        if path.endswith('.pdf'):
+            from tika import parser   
+            parsed_pdf = parser.from_file(path) 
+            resume_doc = parsed_pdf['content']
+        else:
+            from docx import Document
+            doc = Document(path)
+            fullText = []
+            for para in doc.paragraphs:
+                fullText.append(para.text)
+            resume_doc = '\n'.join(fullText)
+        
+        query = resume_doc
+        query = query.translate(punc)
+        query_arr = [' '.join([lm.lemmatize(w) for w in query.lower().\
+                               split()if not w in stop_words])]
+        
+        tfidf_wm2 = tfidf_vec.transform(query_arr).toarray()
+        
+        docs_similarity = cosine_similarity(tfidf_wm2, tfidf_wm)
+        
+        global query_similarity
+        query_similarity = docs_similarity[0]
+        
+        series = pd.Series(query_similarity, index=tfidf_df.index)
+        sorted_series = series.sort_values(ascending=False)
+        sorted_series = sorted_series[sorted_series!=0]
     
-    query = resume_doc
-    query = query.translate(punc)
-    query_arr = [' '.join([lm.lemmatize(w) for w in query.lower().\
-                           split()if not w in stop_words])]
-    
-    tfidf_wm2 = tfidf_vec.transform(query_arr).toarray()
-    
-    docs_similarity = cosine_similarity(tfidf_wm2, tfidf_wm)
-    
-    global query_similarity
-    query_similarity = docs_similarity[0]
-    
-    series = pd.Series(query_similarity, index=tfidf_df.index)
-    sorted_series = series.sort_values(ascending=False)
-    sorted_series = sorted_series[sorted_series!=0]
-    # print(sorted_series)
-    
-    ##### for Java GET request #####
-    result = ""
-    for index in sorted_series.index:
-        result += index[4:] + ","
-    
-    return result
-    
-    # i = 0
-    # df_result = pd.DataFrame(columns=['Job Title', 'Company Name', \
-    #                                   'Job Description', 'Skills', 'Job Link'])
-                             
-    # for index in sorted_series.index:
-    #     doc_idx = int(index[4:])
-    #     df_result.loc[i] = df.loc[doc_idx]
-    #     i += 1
-     
-    ##### for HTML result #####
-    # return df_result.to_html()
+        result = ""
+        for index in sorted_series.index:
+            result += index[4:] + ","
+        
+        return result
 
-    ##### for REST API calls #####
-    # return df_result.to_json(orient="records")
+def search_with_resume():
+    if request.headers['Authorization'] == 'Jinder':
+        search =  request.args.get('query')
+        search = search.replace('+', ' ')
+        search = search.translate(punc)
+        search_arr = [' '.join([lm.lemmatize(w) for w in search.lower().\
+                                split()if not w in stop_words])]
+        
+        tfidf_search = tfidf_vec.transform(search_arr).toarray()
+        
+        docs_similarity_search = cosine_similarity(tfidf_search, tfidf_wm)
+        query_similarity_search = docs_similarity_search[0]
+        
+        series_weighted_search = pd.Series(query_similarity_search*(2/3) + \
+                                           query_similarity*(1/3), \
+                                               index=tfidf_df.index)
+        sorted_series_weighted_search = series_weighted_search.\
+            sort_values(ascending=False)
+        sorted_series_weighted_search = sorted_series_weighted_search\
+            [sorted_series_weighted_search!=0]
+        
+        result = ""
+        for index in sorted_series_weighted_search.index:
+            result += index[4:] + ","
+        
+        return result
 
-def search():
-    search =  request.args.get('query')
-    search = search.translate(punc)
-    search_arr = [' '.join([lm.lemmatize(w) for w in search.lower().\
-                            split()if not w in stop_words])]
-    
-    tfidf_search = tfidf_vec.transform(search_arr).toarray()
-    
-    docs_similarity_search = cosine_similarity(tfidf_search, tfidf_wm)
-    query_similarity_search = docs_similarity_search[0]
-    
-    series_weighted_search = pd.Series(query_similarity_search*(2/3) + \
-                                       query_similarity*(1/3), \
-                                           index=tfidf_df.index)
-    sorted_series_weighted_search = series_weighted_search.\
-        sort_values(ascending=False)
-    sorted_series_weighted_search = sorted_series_weighted_search\
-        [sorted_series_weighted_search!=0]
-    # print(sorted_series_weighted_search)
-    
-    ##### for Java GET request #####
-    result = ""
-    for index in sorted_series_weighted_search.index:
-        result += index[4:] + ","
-    
-    return result
-    
-    # i = 0
-    # df_result_weighted_search = \
-    #     pd.DataFrame(columns=['Job Title', 'Company Name', 'Job Description', \
-    #                           'Skills', 'Job Link'])
-                             
-    # for index in sorted_series_weighted_search.index:
-    #     doc_idx = int(index[4:])
-    #     df_result_weighted_search.loc[i] = df.loc[doc_idx]
-    #     i += 1
-    
-    ##### for HTML result #####
-    # return df_result_weighted_search.to_html()
+def similar_jobs():
+    if request.headers['Authorization'] == 'Jinder':
+        job_id = request.args.get('jobid')
+        job_details = df.iloc[int(job_id)]['corpus']
+        job_details = job_details.translate(punc)
+        job_details_arr = [' '.join([lm.lemmatize(w) for w in job_details.lower().\
+                                split()if not w in stop_words])]
+        
+        tfidf_job_match = tfidf_vec.transform(job_details_arr).toarray()
+        
+        docs_similarity_job_match = cosine_similarity(tfidf_job_match, tfidf_wm)
+        query_similarity_job_match = docs_similarity_job_match[0]
+        
+        series_job_match = pd.Series(query_similarity_job_match, \
+                                               index=tfidf_df.index)
+        sorted_series_job_match = series_job_match.sort_values(ascending=False)
+        sorted_series_job_match = sorted_series_job_match[1:11]
+        
+        result = ""
+        for index in sorted_series_job_match.index:
+            result += index[4:] + ","
+        
+        return result
 
-    ##### for REST API calls #####
-    # return df_result_weighted_search.to_json(orient="records")
+def pref_survey():
+    if request.headers['Authorization'] == 'Jinder':
+        with sqlEngine.connect() as conn, conn.begin():
+            df_pref = pd.read_sql_table("user_preference", conn);
+            df_pref_job_title = pd.read_sql_table("user_preference_preferredjobtitle", \
+                                                  conn);
+            df_pref_job_role = pd.read_sql_table("user_preference_preferredjobrole", \
+                                                 conn);
+                
+        user_id =  request.args.get('id')
+        
+        preferred_tech = df_pref[df_pref['user_id']==int(user_id)]\
+            ['preferredTechnologies']
+        preferred_tech = preferred_tech.values[0]
+        preferred_tech = ' '.join(preferred_tech.split(','))
+        
+        pref_id = df_pref[df_pref['user_id']==int(user_id)]['id']
+        pref_id = pref_id.values[0]
+        
+        preferred_job_title = ' '.join(df_pref_job_title[df_pref_job_title\
+                                                         ['User_Preference_id']==pref_id]\
+                                       ['preferredJobTitle'].values)
+        preferred_job_role = ' '.join(df_pref_job_role[df_pref_job_role\
+                                                       ['User_Preference_id']==pref_id]\
+                                      ['preferredJobRole'].values)
+        
+        pref_doc = preferred_tech + ' ' + preferred_job_title + ' ' + preferred_job_role
+        pref_doc = pref_doc.translate(punc)
+        pref_doc_arr = [' '.join([lm.lemmatize(w) for w in pref_doc.lower().\
+                                split()if not w in stop_words])]
+        
+        tfidf_pref = tfidf_vec.transform(pref_doc_arr).toarray()
+        
+        docs_similarity_pref = cosine_similarity(tfidf_pref, tfidf_wm)
+        query_similarity_pref = docs_similarity_pref[0]
+        
+        series_pref = pd.Series(query_similarity_pref, \
+                                               index=tfidf_df.index)
+        sorted_series_pref = series_pref.sort_values(ascending=False)
+        sorted_series_pref = sorted_series_pref[:20]
+        
+        result = ""
+        for index in sorted_series_pref.index:
+            result += index[4:] + ","
+        
+        return result
+
+def post_jobs():
+    if request.headers['Authorization'] == 'Jinder':
+        start()
+        return "200 OK"
