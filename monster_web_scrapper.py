@@ -13,12 +13,15 @@ def scrap_jobs():
     urlfront = "https://www.monster.com.sg/srp/results?start="
     urlend = "&sort=2&limit=100&query=it&searchId=2b34467f-fc11-4651-98e3-a742474195f5"
     
+    # input path of chromedriver
+    chromedriver_path = ""
+    
     
     # leave this at 1
     start = 1
     
     # number of pages to scrape
-    num_pages = 11
+    num_pages = 2
     
     
     for i in range(num_pages):
@@ -31,7 +34,7 @@ def scrap_jobs():
         print(url)
     
         # initiating the webdriver. Parameter includes the path of the webdriver.
-        driver = webdriver.Chrome('C:/Users/limkh/Downloads/chromedriver_win32/chromedriver.exe')
+        driver = webdriver.Chrome(str(chromedriver_path) + 'chromedriver.exe')
         driver.get(url)
     
         # this is just to ensure that the page is loaded
@@ -90,7 +93,7 @@ def scrap_jobs():
                 urlx = df3['Job Link'].iloc[i]
     
                 # initiating the webdriver. Parameter includes the path of the webdriver.
-                driver = webdriver.Chrome('C:/Users/limkh/Downloads/chromedriver_win32/chromedriver.exe')
+                driver = webdriver.Chrome(str(chromedriver_path) + 'chromedriver.exe')
                 driver.get(urlx)
     
                 # this is just to ensure that the page is loaded
