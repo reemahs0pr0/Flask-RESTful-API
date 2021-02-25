@@ -15,7 +15,7 @@ def start():
     global sqlEngine, df
     sqlEngine = create_engine('mysql+pymysql://root:password@localhost:3306/jinder')
     with sqlEngine.connect() as conn, conn.begin():
-        df = pd.read_sql_table('jobs', conn);
+        df = pd.read_sql_table('jobs', conn)
     
     df['corpus'] = df['jobTitle'] + ' ' + df['jobDescription'] + ' ' + \
         df['skills'].astype(str) + ' ' + df['companyName']
@@ -82,7 +82,7 @@ def search():
 def resume():    
     if request.headers['Authorization'] == 'Jinder':
         with sqlEngine.connect() as conn, conn.begin():
-            df_user = pd.read_sql_table("jobseeker", conn);
+            df_user = pd.read_sql_table("jobseeker", conn)
             
         user_id =  request.args.get('id')
         path = df_user.iloc[int(user_id)-1]['resumeUrl']
@@ -175,11 +175,11 @@ def similar_jobs():
 def pref_survey():
     if request.headers['Authorization'] == 'Jinder':
         with sqlEngine.connect() as conn, conn.begin():
-            df_pref = pd.read_sql_table("user_preference", conn);
+            df_pref = pd.read_sql_table("user_preference", conn)
             df_pref_job_title = pd.read_sql_table("user_preference_preferredjobtitle", \
-                                                  conn);
+                                                  conn)
             df_pref_job_role = pd.read_sql_table("user_preference_preferredjobrole", \
-                                                 conn);
+                                                 conn)
                 
         user_id =  request.args.get('id')
         
